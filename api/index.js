@@ -15,19 +15,13 @@ client.once('ready', () => {
 });
 async function getServerStats(guildId) {
   try {
-    console.log(`Fetching stats for guild ID: ${guildId}`);
     const guild = await client.guilds.fetch(guildId);
     if (!guild) {
-      console.log('Guild not found');
       return null;
     }
 
-    console.log(`Guild found: ${guild.name}`);
-    console.log(`Member count: ${guild.memberCount}`);
-
     const channelCount = guild.channels.cache.size;
-    console.log(`Total channel count: ${channelCount}`);
-    
+
     let recentMessageCount = 0;
     let accessibleChannels = 0;
     const textChannels = guild.channels.cache.filter(channel => channel.type === 0);
@@ -41,9 +35,7 @@ async function getServerStats(guildId) {
         // Continue to the next channel
       }
     }
-    console.log(`Recent message count (up to last 100 per accessible channel): ${recentMessageCount}`);
-    console.log(`Accessible channels: ${accessibleChannels}/${textChannels.size}`);
-
+ 
     const stats = {
       members: guild.memberCount,
       totalChannels: channelCount,
@@ -51,10 +43,10 @@ async function getServerStats(guildId) {
       totalTextChannels: textChannels.size,
       recentMessages: recentMessageCount
     };
-    console.log('Final stats:', stats);
+
     return stats;
   } catch (error) {
-    console.error('Error fetching server stats:', error);
+   
     return null;
   }
 }
@@ -78,7 +70,6 @@ export default async function handler(req, res) {
     try {
       await client.login(process.env.DISCORD_TOKEN);
     } catch (error) {
-      console.error('Failed to log in to Discord:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -86,14 +77,12 @@ export default async function handler(req, res) {
 
   try {
     const stats = await getServerStats(guildId);
-    console.log('Stats returned from getServerStats:', stats);
     if (stats) {
       res.status(200).json(stats);
     } else {
       res.status(404).json({ error: 'Guild not found or error fetching stats' });
     }
   } catch (error) {
-    console.error('Error getting server stats:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 }
