@@ -23,46 +23,33 @@ async function getServerStats(guildId) {
     }
 
     console.log(`Guild found: ${guild.name}`);
-    console.log(`Initial member count: ${guild.memberCount}`);
-
-    let memberCount = guild.memberCount;
-    if (guild.memberCount !== guild.members.cache.size) {
-      console.log('Member cache incomplete, fetching members...');
-      try {
-        await guild.members.fetch();
-        memberCount = guild.members.cache.size;
-        console.log(`Updated member count after fetch: ${memberCount}`);
-      } catch (fetchError) {
-        console.error('Error fetching members:', fetchError);
-        // Fallback to the initial count if fetch fails
-      }
-    }
+    console.log(`Member count: ${guild.memberCount}`);
 
     const channelCount = guild.channels.cache.size;
-    console.log(`Channel count: ${channelCount}`);
+    console.log(`Total channel count: ${channelCount}`);
     
-    let messageCount = 0;
+    let recentMessageCount = 0;
     let accessibleChannels = 0;
     const textChannels = guild.channels.cache.filter(channel => channel.type === 0);
     for (const channel of textChannels.values()) {
       try {
         const messages = await channel.messages.fetch({ limit: 100 });
-        messageCount += messages.size;
+        recentMessageCount += messages.size;
         accessibleChannels++;
       } catch (error) {
         console.log(`Couldn't access messages in channel ${channel.name}: ${error.message}`);
         // Continue to the next channel
       }
     }
-    console.log(`Message count (last 100 per accessible channel): ${messageCount}`);
+    console.log(`Recent message count (up to last 100 per accessible channel): ${recentMessageCount}`);
     console.log(`Accessible channels: ${accessibleChannels}/${textChannels.size}`);
 
     const stats = {
-      members: memberCount,
-      channels: channelCount,
-      messages: messageCount,
-      accessibleChannels: accessibleChannels,
-      totalTextChannels: textChannels.size
+      members: guild.memberCount,
+      totalChannels: channelCount,
+      accessibleTextChannels: accessibleChannels,
+      totalTextChannels: textChannels.size,
+      recentMessages: recentMessageCount
     };
     console.log('Final stats:', stats);
     return stats;
