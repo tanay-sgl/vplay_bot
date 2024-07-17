@@ -1,7 +1,10 @@
 import { Client, GatewayIntentBits } from 'discord.js';
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+  ],
 });
 
 let isClientReady = false;
@@ -10,13 +13,20 @@ client.once('ready', () => {
   console.log(`Logged in as ${client.user?.tag}`);
   isClientReady = true;
 });
-
 async function getServerStats(guildId) {
   try {
     const guild = await client.guilds.fetch(guildId);
     if (!guild) return null;
 
-    const memberCount = guild.memberCount;
+    let memberCount;
+    if (guild.memberCount !== guild.members.cache.size) {
+      // If the cache doesn't have all members, fetch them
+      await guild.members.fetch();
+      memberCount = guild.members.cache.size;
+    } else {
+      memberCount = guild.memberCount;
+    }
+
     const channelCount = guild.channels.cache.size;
     
     // Get message count (up to last 100 messages per channel)
