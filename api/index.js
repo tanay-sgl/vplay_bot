@@ -42,17 +42,27 @@ async function getServerStats(guildId) {
     console.log(`Channel count: ${channelCount}`);
     
     let messageCount = 0;
+    let accessibleChannels = 0;
     const textChannels = guild.channels.cache.filter(channel => channel.type === 0);
     for (const channel of textChannels.values()) {
-      const messages = await channel.messages.fetch({ limit: 100 });
-      messageCount += messages.size;
+      try {
+        const messages = await channel.messages.fetch({ limit: 100 });
+        messageCount += messages.size;
+        accessibleChannels++;
+      } catch (error) {
+        console.log(`Couldn't access messages in channel ${channel.name}: ${error.message}`);
+        // Continue to the next channel
+      }
     }
-    console.log(`Message count (last 100 per channel): ${messageCount}`);
+    console.log(`Message count (last 100 per accessible channel): ${messageCount}`);
+    console.log(`Accessible channels: ${accessibleChannels}/${textChannels.size}`);
 
     const stats = {
       members: memberCount,
       channels: channelCount,
       messages: messageCount,
+      accessibleChannels: accessibleChannels,
+      totalTextChannels: textChannels.size
     };
     console.log('Final stats:', stats);
     return stats;
@@ -86,9 +96,6 @@ export default async function handler(req, res) {
     }
   }
 
-  console.log('Received request:', req.method, req.url);
-  console.log('Headers:', req.headers);
-  console.log('Query:', req.query);
 
   try {
     const stats = await getServerStats(guildId);
