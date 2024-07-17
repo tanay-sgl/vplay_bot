@@ -1,11 +1,7 @@
 import { Client, GatewayIntentBits } from 'discord.js';
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ],
+  intents: [GatewayIntentBits.Guilds],
 });
 
 let isClientReady = false;
@@ -16,45 +12,63 @@ client.once('ready', () => {
 });
 
 async function getServerStats(guildId) {
-  const guild = client.guilds.cache.get(guildId);
-  if (!guild) return null;
+  try {
+    const guild = await client.guilds.fetch(guildId);
+    if (!guild) return null;
 
-  const memberCount = guild.memberCount;
-  const channelCount = guild.channels.cache.size;
-  let messageCount = 0;
+    const memberCount = guild.memberCount;
+    const channelCount = guild.channels.cache.size;
+    
+    // Get message count (up to last 100 messages per channel)
+    let messageCount = 0;
+    const textChannels = guild.channels.cache.filter(channel => channel.type === 0);
+    for (const channel of textChannels.values()) {
+      const messages = await channel.messages.fetch({ limit: 100 });
+      messageCount += messages.size;
+    }
 
-  const channels = guild.channels.cache.filter((channel) => channel.type === 0);
-  for (const channel of channels.values()) {
-    const messages = await channel.messages.fetch({ limit: 100 });
-    messageCount += messages.size;
+    return {
+      members: memberCount,
+      channels: channelCount,
+      messages: messageCount,
+    };
+  } catch (error) {
+    console.error('Error fetching server stats:', error);
+    return null;
   }
-
-  return {
-    members: memberCount,
-    channels: channelCount,
-    messages: messageCount,
-  };
 }
 
 export default async function handler(req, res) {
-  if (!isClientReady) {
-    await client.login(process.env.DISCORD_TOKEN);
-  }
-
-  const { guildId, apiKey } = req.query;
-
-  if (apiKey !== process.env.API_KEY) {
+  // Strict API key check
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey || apiKey !== process.env.API_KEY) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  const { guildId } = req.query;
 
   if (!guildId) {
     return res.status(400).json({ error: 'Invalid guildId' });
   }
 
-  const stats = await getServerStats(guildId);
-  if (stats) {
-    return res.status(200).json(stats);
-  } else {
-    return res.status(404).json({ error: 'Guild not found' });
+  if (!isClientReady) {
+    try {
+      await client.login(process.env.DISCORD_TOKEN);
+    } catch (error) {
+      console.error('Failed to log in to Discord:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  try {
+    const stats = await getServerStats(guildId);
+    if (stats) {
+      res.status(200).json(stats);
+    } else {
+      res.status(404).json({ error: 'Guild not found or error fetching stats' });
+    }
+  } catch (error) {
+    console.error('Error getting server stats:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
