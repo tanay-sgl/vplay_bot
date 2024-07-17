@@ -15,33 +15,47 @@ client.once('ready', () => {
 });
 async function getServerStats(guildId) {
   try {
+    console.log(`Fetching stats for guild ID: ${guildId}`);
     const guild = await client.guilds.fetch(guildId);
-    if (!guild) return null;
+    if (!guild) {
+      console.log('Guild not found');
+      return null;
+    }
 
-    let memberCount;
+    console.log(`Guild found: ${guild.name}`);
+    console.log(`Initial member count: ${guild.memberCount}`);
+
+    let memberCount = guild.memberCount;
     if (guild.memberCount !== guild.members.cache.size) {
-      // If the cache doesn't have all members, fetch them
-      await guild.members.fetch();
-      memberCount = guild.members.cache.size;
-    } else {
-      memberCount = guild.memberCount;
+      console.log('Member cache incomplete, fetching members...');
+      try {
+        await guild.members.fetch();
+        memberCount = guild.members.cache.size;
+        console.log(`Updated member count after fetch: ${memberCount}`);
+      } catch (fetchError) {
+        console.error('Error fetching members:', fetchError);
+        // Fallback to the initial count if fetch fails
+      }
     }
 
     const channelCount = guild.channels.cache.size;
+    console.log(`Channel count: ${channelCount}`);
     
-    // Get message count (up to last 100 messages per channel)
     let messageCount = 0;
     const textChannels = guild.channels.cache.filter(channel => channel.type === 0);
     for (const channel of textChannels.values()) {
       const messages = await channel.messages.fetch({ limit: 100 });
       messageCount += messages.size;
     }
+    console.log(`Message count (last 100 per channel): ${messageCount}`);
 
-    return {
+    const stats = {
       members: memberCount,
       channels: channelCount,
       messages: messageCount,
     };
+    console.log('Final stats:', stats);
+    return stats;
   } catch (error) {
     console.error('Error fetching server stats:', error);
     return null;
@@ -49,6 +63,7 @@ async function getServerStats(guildId) {
 }
 
 export default async function handler(req, res) {
+  
   // Strict API key check
   const apiKey = req.headers['x-api-key'];
   if (!apiKey || apiKey !== process.env.API_KEY) {
@@ -60,6 +75,7 @@ export default async function handler(req, res) {
   if (!guildId) {
     return res.status(400).json({ error: 'Invalid guildId' });
   }
+  
 
   if (!isClientReady) {
     try {
@@ -70,8 +86,13 @@ export default async function handler(req, res) {
     }
   }
 
+  console.log('Received request:', req.method, req.url);
+  console.log('Headers:', req.headers);
+  console.log('Query:', req.query);
+
   try {
     const stats = await getServerStats(guildId);
+    console.log('Stats returned from getServerStats:', stats);
     if (stats) {
       res.status(200).json(stats);
     } else {
