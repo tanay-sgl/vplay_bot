@@ -1,17 +1,15 @@
 {
   "name": "vplay_bot",
-  "module": "index.ts",
+  "version": "1.0.0",
+  "main": "api/index.js",
   "type": "module",
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
-  },
   "dependencies": {
     "discord.js": "^14.0.0"
   },
   "scripts": {
-    "start": "bun run index.ts"
+    "start": "node api/index.js"
+  },
+  "engines": {
+    "node": ">=18.x"
   }
 }
