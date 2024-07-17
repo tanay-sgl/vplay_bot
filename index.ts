@@ -1,6 +1,4 @@
-// index.ts
 import { Client, GatewayIntentBits, TextChannel } from 'discord.js';
-import { serve } from 'bun';
 
 const client = new Client({
   intents: [
@@ -23,10 +21,9 @@ async function getServerStats(guildId: string) {
 
   const memberCount = guild.memberCount;
   const channelCount = guild.channels.cache.size;
-
   let messageCount = 0;
+
   const channels = guild.channels.cache.filter((channel) => channel.type === 0) as Map<string, TextChannel>;
-  
   for (const channel of channels.values()) {
     const messages = await channel.messages.fetch({ limit: 100 });
     messageCount += messages.size;
@@ -39,9 +36,11 @@ async function getServerStats(guildId: string) {
   };
 }
 
-const server = serve({
-  port: process.env.PORT || 3000,
-  async fetch(req) {
+const port = process.env.PORT || 3000;
+
+export default {
+  port,
+  async fetch(req: Request) {
     if (!isClientReady) {
       await client.login(process.env.DISCORD_TOKEN);
     }
@@ -65,6 +64,6 @@ const server = serve({
       return new Response(JSON.stringify({ error: 'Guild not found' }), { status: 404 });
     }
   },
-});
+};
 
-console.log(`Server running on port ${server.port}`);
+console.log(`Server ready to handle requests on port ${port}`);
