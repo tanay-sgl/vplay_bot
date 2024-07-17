@@ -12,6 +12,6 @@
     "discord.js": "^14.0.0"
   },
   "scripts": {
-    "start": "bun index.ts"
+    "start": "bun run index.ts"
   }
 }
